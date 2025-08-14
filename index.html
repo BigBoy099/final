@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>MASS ADOPTION — Action Skill Cooldowns</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" xintegrity="sha512-iecdLmaskl7CVKwpK3S9C6GgQ0gA8f2+5pXg+kX0eP6f5h0f/tK4i4/uVv5+bUjT2jF+A8zN+w9t2D+b2N+w9t2D+b2N+w==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+<style>
+    :root{
+        --bg-1:#0b1220;
+        --bg-2:#0e1a2e;
+        --glass: rgba(255,255,255,0.06);
+        --border: rgba(255,255,255,0.12);
+        --ready:#00e08a;
+        --active:#ff3b3b;
+        --txt:#e9f0ff;
+        --muted:#a6b2c6;
+        --glow:#6ae0ff;
+
+        --ready-tournament: #3b82f6; /* Blue for tournament */
+        --ready-main-game: #ef4444; /* Red for main game */
+        --ready-custom: #22c55e;   /* Green for custom */
+    }
+    *{box-sizing:border-box}
+    html,body{height:auto; min-height:100%}
+    body{
+        margin:0;
+        font-family:Inter,system-ui,Segoe UI,Roboto,Helvetica,Arial,sans-serif;
+        background:
+            radial-gradient(1200px 800px at 10% 10%, #102035 0%, transparent 60%),
+            radial-gradient(1000px 700px at 90% 90%, #141b2a 0%, transparent 60%),
+            linear-gradient(180deg, var(--bg-1), var(--bg-2));
+        color:var(--txt);
+        display:flex; align-items:flex-start; justify-content:center; padding:24px;
+    }
+    .panel{
+        width:min(520px, 92vw);
+        padding:24px 20px;
+        background:var(--glass);
+        border:1px solid var(--border);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.06);
+        border-radius:24px;
+        backdrop-filter: blur(12px);
+        display: flex;
+        flex-direction: column;
+    }
+    .header{
+        display:flex; align-items:center; justify-content:space-between;
+        margin-bottom:16px; gap:10px;
+    }
+    .title{
+        font-weight:800; letter-spacing:0.3px; font-size:20px;
+        display:flex; align-items:center; gap:10px;
+    }
+    .title .dot{
+        width:10px; height:10px; border-radius:50%;
+        background:linear-gradient(135deg, #66f -5%, #0ff 110%);
+        box-shadow:0 0 16px var(--glow);
+    }
+    .subtitle{ color:var(--muted); font-size:13px }
+    
+    .stack{
+        display:flex; flex-direction:column; gap:18px; margin-top:8px;
+    }
+
+    .tabs-container {
+        display: flex;
+        justify-content: space-between;
+        gap: 8px;
+        margin-bottom: 24px;
+        padding-bottom: 8px;
+        border-bottom: 1px solid var(--border);
+        flex-shrink: 0;
+    }
+    .tab {
+        flex: 1;
+        background: none;
+        border: none;
+        padding: 10px 12px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+        color: var(--muted);
+        cursor: pointer;
+        transition: color 0.2s ease, transform 0.1s ease;
+        position: relative;
+        text-align: center;
+        user-select: none;
+    }
+    .tab:hover {
+        color: var(--txt);
+    }
+    .tab.active {
+        color: var(--txt);
+        border-bottom: 2px solid var(--glow);
+    }
+    .tab-content {
+        display: none;
+        flex-direction: column;
+        flex-grow: 1;
+        padding-right: 0;
+        margin-right: 0;
+    }
+    .tab-content.active {
+        display: flex;
+    }
+
+    /* New styles for the notification dots on tabs */
+    .tab .notif-dot {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        display: none;
+    }
+    .tab .notif-dot.active {
+        display: block;
+    }
+    .tab .notif-dot.active.blue {
+        background-color: var(--ready-tournament);
+        box-shadow: 0 0 10px var(--ready-tournament), 0 0 20px var(--ready-tournament);
+        animation: pulse-blue 1.5s infinite ease-in-out;
+    }
+    .tab .notif-dot.active.red {
+        background-color: var(--ready-main-game);
+        box-shadow: 0 0 10px var(--ready-main-game), 0 0 20px var(--ready-main-game);
+        animation: pulse-red 1.5s infinite ease-in-out;
+    }
+    .tab .notif-dot.active.green {
+        background-color: var(--ready-custom);
+        box-shadow: 0 0 10px var(--ready-custom), 0 0 20px var(--ready-custom);
+        animation: pulse-green 1.5s infinite ease-in-out;
+    }
+
+    @keyframes pulse-blue { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes pulse-red { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    
+    .skill{
+        display:flex; align-items:center; gap:16px;
+        padding:12px; border-radius:18px; position:relative; overflow:hidden;
+        border:1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0));
+    }
+    .skill::after{
+        content:""; position:absolute; inset:-40%;
+        background: radial-gradient(40% 40% at 15% 15%, rgba(255,255,255,0.06), transparent 50%),
+                    radial-gradient(30% 30% at 85% 80%, rgba(255,255,255,0.04), transparent 50%);
+        animation: drift 12s linear infinite;
+        pointer-events:none;
+    }
+    @keyframes drift {
+        0%{ transform: translate(0,0) rotate(0deg); }
+        50%{ transform: translate(-2%,1%) rotate(20deg); }
+        100%{ transform: translate(0,0) rotate(0deg); }
+    }
+
+    /* Circle button */
+    .circle{
+        --accent: var(--ready);
+        width:150px;
+        height:150px;
+        flex-shrink:0;
+        border-radius:50%;
+        position:relative;
+        cursor:pointer;
+        display:grid;
+        place-items:center;
+        transition: transform .25s ease, filter .25s ease;
+        filter: drop-shadow(0 0 0 rgba(0,0,0,0));
+    }
+    .circle:hover{ transform: translateY(-2px) scale(1.02) }
+    .ring, .core{
+        position:absolute; border-radius:50%;
+    }
+    .ring{
+        inset:0;
+        background:
+            conic-gradient(from -90deg, var(--accent) 0deg, var(--accent) 360deg);
+        box-shadow: 0 0 22px rgba(0, 224, 138, .45);
+        transition: box-shadow .25s ease;
+    }
+    .circle:hover .ring{
+        box-shadow: 0 0 32px rgba(0, 224, 138, .75), 0 0 48px rgba(0, 224, 138, .35);
+    }
+    .core{
+        inset:6px;
+        background: radial-gradient(120% 120% at 30% 20%, rgba(255,255,255,0.18), rgba(255,255,255,0.06) 35%, rgba(15,25,40,0.7) 100%);
+        border:1px solid rgba(255,255,255,0.12);
+        display:grid; place-items:center; text-align:center; padding:8px;
+        overflow:hidden;
+    }
+    .core::before{
+        content:""; position:absolute; inset:-40%;
+        background:
+            radial-gradient(35% 35% at 70% 30%, rgba(0,255,180,.16), transparent 55%),
+            radial-gradient(35% 35% at 20% 80%, rgba(0,140,255,.16), transparent 55%);
+        filter: blur(10px);
+        animation: swirl 8s ease-in-out infinite;
+    }
+    @keyframes swirl {
+        0%,100%{ transform: rotate(0deg) translate(0,0) }
+        50%{ transform: rotate(8deg) translate(1%, -1%) }
+    }
+
+    .label{
+        position:relative; z-index:1;
+        display:flex; flex-direction:column; align-items:center; gap:2px;
+        user-select:none;
+    }
+    .name{
+        font-weight:800; letter-spacing:.3px; font-size:12px;
+        padding:4px 8px; border-radius:999px;
+        background: rgba(255,255,255,0.08);
+        border:1px solid rgba(255,255,255,0.14);
+        backdrop-filter: blur(4px);
+        white-space: nowrap;
+    }
+    .status{
+        font-size:22px; font-weight:800; line-height:1;
+    }
+    .hint{
+        font-size:11px; color:var(--muted); font-weight:600; letter-spacing:.2px;
+    }
+
+    .circle.active{ --accent: var(--active); }
+    .circle.active .ring{ box-shadow: 0 0 22px rgba(255, 59, 59, .45); }
+    .circle.active:hover .ring{ box-shadow: 0 0 36px rgba(255, 59, 59, .8), 0 0 56px rgba(255,59,59,.35); }
+
+    .meta{
+        display:flex; flex-direction:column; gap:4px;
+        position: relative;
+    }
+    .meta .titleline{
+        display:flex; align-items:baseline; gap:10px; flex-wrap:wrap;
+    }
+    .meta .skillname{ font-weight:800; letter-spacing:.2px }
+    .meta .cooldown{ color:var(--muted); font-size:12px }
+    .pill{
+        font-size:11px; padding:4px 8px; border-radius:999px; border:1px solid var(--border);
+        background: rgba(255,255,255,0.05); color:var(--muted);
+        position: relative;
+    }
+    .reset-pill {
+        margin-top: 4px;
+        cursor: pointer;
+        user-select: none;
+        display: inline-block;
+        transition: all 0.2s ease-in-out;
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+    .reset-timer-ring {
+        width: 14px;
+        height: 14px;
+        border-radius: 50%;
+        position: relative;
+        display: none;
+    }
+    .reset-timer-ring::before {
+        content: '';
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background: conic-gradient(
+            transparent 0%,
+            transparent 90%,
+            rgba(255, 255, 255, 0.4) 90%,
+            rgba(255, 255, 255, 0.4) 100%
+        );
+        animation: reset-timer 1s linear forwards;
+        opacity: 0;
+    }
+    .reset-pill.holding {
+        background-color: var(--active);
+        color: white;
+        transform: scale(1.1);
+        box-shadow: 0 0 10px rgba(255,59,59,0.5);
+    }
+    .reset-pill.holding .reset-timer-ring {
+        display: block;
+    }
+    .reset-pill.holding .reset-timer-ring::before {
+        opacity: 1;
+    }
+    @keyframes reset-timer {
+        from { transform: rotate(-90deg); }
+        to { transform: rotate(270deg); }
+    }
+    .skill[data-skill="collect"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(0,224,138,.45)) }
+    .skill[data-skill="tweet"]      .circle:hover{ filter: drop-shadow(0 0 16px rgba(80,180,255,.45)) }
+    .skill[data-skill="hype"]       .circle:hover{ filter: drop-shadow(0 0 16px rgba(255,160,64,.45)) }
+    .skill[data-skill="bullrun"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(208,160,255,.45)) }
+    
+    .skill[data-skill="pump"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(255,64,255,.45)) }
+    .skill[data-skill="all-in"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(255,200,64,.45)) }
+    
+    .skill[data-skill="main-game-collect"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(0,224,138,.45)) }
+    .skill[data-skill="main-game-tweet"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(80,180,255,.45)) }
+    .skill[data-skill="main-game-hype"] .circle:hover{ filter: drop-shadow(0 0 16px rgba(255,160,64,.45)) }
+
+
+    /* Custom timer styles */
+    .add-skill-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        border: 1px dashed var(--border);
+        background: rgba(255,255,255,0.03);
+        color: var(--muted);
+        font-size: 60px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        user-select: none;
+        flex-shrink: 0;
+    }
+    .add-skill-button:hover {
+        background: rgba(255,255,255,0.1);
+        color: var(--txt);
+    }
+    .custom-section-description {
+        color: var(--muted);
+        font-size: 14px;
+        margin-bottom: 16px;
+    }
+    .custom-timers-container {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    /* Modal styles */
+    .modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.8);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+    }
+    .modal-overlay.active {
+        display: flex;
+    }
+    .modal {
+        background: var(--bg-1);
+        padding: 24px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        box-shadow: 0 10px 40px rgba(0,0,0,0.5);
+        width: min(400px, 90vw);
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+    }
+    .modal h3 {
+        margin: 0 0 8px 0;
+        font-size: 18px;
+    }
+    .modal input, .modal select {
+        width: 100%;
+        padding: 10px 12px;
+        border-radius: 8px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.05);
+        color: var(--txt);
+        font-size: 14px;
+    }
+    .modal input:focus, .modal select:focus {
+        outline: none;
+        border-color: var(--glow);
+    }
+    .modal .form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+    }
+    .modal .form-group label {
+        font-size: 12px;
+        color: var(--muted);
+        font-weight: 600;
+        letter-spacing: 0.2px;
+    }
+    .modal button.save-button, .modal button.close-button {
+        padding: 10px 16px;
+        border-radius: 8px;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .modal button.save-button {
+        background: var(--glow);
+        color: var(--bg-1);
+    }
+    .modal button.save-button:hover {
+        background: #99f;
+        box-shadow: 0 0 16px rgba(102,102,255,0.5);
+    }
+    .modal button.close-button {
+        background: var(--border);
+        color: var(--txt);
+    }
+    .modal .button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: flex-end;
+        margin-top: 8px;
+    }
+    .delete-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background: none;
+        border: none;
+        color: rgba(255, 255, 255, 0.4);
+        cursor: pointer;
+        font-size: 18px;
+        transition: color 0.2s ease;
+    }
+    .delete-button:hover {
+        color: var(--active);
+    }
+    .delete-button:focus {
+        outline: none;
+    }
+    .duration-inputs {
+        display: grid;
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 10px;
+        text-align: center;
+    }
+    .duration-inputs input {
+        width: 100%;
+        -moz-appearance: textfield;
+        text-align: center;
+    }
+    .duration-inputs input::-webkit-inner-spin-button, 
+    .duration-inputs input::-webkit-outer-spin-button {
+        -webkit-appearance: none;
+        margin: 0;
+    }
+    .stack.add-button {
+        flex-shrink: 0;
+    }
+
+    /* New styles for the fixed notification bar */
+    #cooldown-ready-bar {
+        position: fixed;
+        bottom: 0;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(500px, 90vw);
+        background: linear-gradient(90deg, #0e1a2e, #141b2a);
+        border: 1px solid rgba(0, 224, 138, 0.2);
+        box-shadow: 0 -5px 20px rgba(0, 224, 138, 0.2);
+        border-radius: 12px 12px 0 0;
+        padding: 12px 20px;
+        display: none; /* Hidden by default */
+        justify-content: center;
+        align-items: center;
+        gap: 10px;
+        transition: transform 0.3s ease-out, opacity 0.3s ease-out;
+        opacity: 0;
+        z-index: 999;
+    }
+    #cooldown-ready-bar.active {
+        display: flex;
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+    .ready-pill {
+        background-color: var(--ready);
+        color: var(--bg-1);
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 800;
+        cursor: pointer;
+        transition: all 0.2s ease;
+    }
+    .ready-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 2px 5px rgba(0, 224, 138, 0.4);
+    }
+    
+    .ready-pill.blue {
+        background: var(--ready-tournament);
+        color: var(--txt);
+        box-shadow: 0 0 10px rgba(59, 130, 246, 0.5);
+    }
+    .ready-pill.red {
+        background: var(--ready-main-game);
+        color: var(--txt);
+        box-shadow: 0 0 10px rgba(239, 68, 68, 0.5);
+    }
+    .ready-pill.green {
+        background: var(--ready-custom);
+        color: var(--txt);
+        box-shadow: 0 0 10px rgba(34, 197, 94, 0.5);
+    }
+
+    /* New styles for the sound toggle button */
+    .sound-toggle-button {
+        background: none;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        width: 36px;
+        height: 36px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--muted);
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: inset 0 1px 0 rgba(255,255,255,0.06);
+    }
+    .sound-toggle-button:hover {
+        background: rgba(255,255,255,0.05);
+    }
+    .sound-toggle-button.active {
+        color: var(--ready);
+        border-color: var(--ready);
+        box-shadow: inset 0 1px 0 rgba(0,224,138,0.3), 0 0 8px rgba(0,224,138,0.4);
+    }
+    .sound-toggle-button i {
+        font-size: 16px;
+    }
+
+    @media (max-width:480px){
+        .circle{ width:136px; height:136px; }
+    }
+</style>
+</head>
+<body>
+
+    <div class="panel">
+        <div class="header">
+            <div class="title"><span class="dot"></span> MASS ADOPTION — Action Skills</div>
+            <button id="toggle-sound-button" class="sound-toggle-button" aria-label="Toggle notification sounds">
+                <i class="fas fa-volume-up"></i>
+            </button>
+        </div>
+        <div class="subtitle">Tap a circle to start its cooldown</div>
+
+        <div class="tabs-container">
+            <button class="tab active" data-tab="tournament">
+                TOURNAMENT TIMERS
+                <span class="notif-dot blue"></span>
+            </button>
+            <button class="tab" data-tab="main-game">
+                MAIN GAME TIMERS
+                <span class="notif-dot red"></span>
+            </button>
+            <button class="tab" data-tab="custom">
+                CUSTOM TIMERS
+                <span class="notif-dot green"></span>
+            </button>
+        </div>
+
+        <!-- Content for each tab -->
+        <div id="tab-content-tournament" class="tab-content active">
+            <div class="stack">
+                <div class="skill" data-skill="tournament-collect" data-name="Collect">
+                    <div class="circle" data-duration="60" aria-label="Collect cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">💵 COLLECT</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">Ready to collect</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Collect</div>
+                            <span class="pill">CD: 1 min</span>
+                        </div>
+                        <div class="cooldown">Starts green, turns red on tap, counts 1:00 → 0:00, auto-resets.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="tournament-collect">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="tournament-tweet" data-name="Tweet">
+                    <div class="circle" data-duration="600" aria-label="Tweet cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🐦 TWEET</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">10–20 random users</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Tweet</div>
+                            <span class="pill">Min CD: 10 mins</span>
+                        </div>
+                        <div class="cooldown">Minimum cooldown is 10 minutes. Counts 10:00 → 0:00.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="tournament-tweet">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="tournament-hype" data-name="Hype">
+                    <div class="circle" data-duration="900" aria-label="Hype cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🔥 HYPE</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">Airdrop or Balance</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Hype</div>
+                            <span class="pill">Min CD: 15 mins</span>
+                        </div>
+                        <div class="cooldown">Grants Airdrop or Balance. Counts 15:00 → 0:00.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="tournament-hype">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="tournament-bullrun" data-name="Bull Run">
+                    <div class="circle" data-duration="3600" aria-label="Bull Run cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🐂 BULL RUN</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">+100 income/min • 20m</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Bull Run</div>
+                            <span class="pill">Min CD: 60 mins</span>
+                        </div>
+                        <div class="cooldown">Coordinate with your team for overlapping boosts.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="tournament-bullrun">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content-main-game" class="tab-content">
+            <div class="stack">
+                <div class="skill" data-skill="main-game-collect" data-name="Collect">
+                    <div class="circle" data-duration="60" aria-label="Collect cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">💵 COLLECT</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">Ready to collect</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Collect</div>
+                            <span class="pill">CD: 1 min</span>
+                        </div>
+                        <div class="cooldown">Starts green, turns red on tap, counts 1:00 → 0:00, auto-resets.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="main-game-collect">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="main-game-tweet" data-name="Tweet">
+                    <div class="circle" data-duration="600" aria-label="Tweet cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🐦 TWEET</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">10–20 random users</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Tweet</div>
+                            <span class="pill">Min CD: 10 mins</span>
+                        </div>
+                        <div class="cooldown">Minimum cooldown is 10 minutes. Counts 10:00 → 0:00.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="main-game-tweet">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="main-game-hype" data-name="Hype">
+                    <div class="circle" data-duration="900" aria-label="Hype cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🔥 HYPE</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">Airdrop or Balance</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Hype</div>
+                            <span class="pill">Min CD: 15 mins</span>
+                        </div>
+                        <div class="cooldown">Grants Airdrop or Balance. Counts 15:00 → 0:00.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="main-game-hype">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                <div class="skill" data-skill="main-game-pump" data-name="Pump It">
+                    <div class="circle" data-duration="7200" aria-label="Pump It cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">🚀 PUMP IT</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">2 hours</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">Pump It</div>
+                            <span class="pill">CD: 2 hours</span>
+                        </div>
+                        <div class="cooldown">Activates a temporary pump in the market.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="main-game-pump">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+
+                 <div class="skill" data-skill="main-game-all-in" data-name="All In">
+                    <div class="circle" data-duration="43200" aria-label="All In cooldown">
+                        <div class="ring"></div>
+                        <div class="core">
+                            <div class="label">
+                                <div class="name">💯 ALL IN</div>
+                                <div class="status" data-role="status">READY</div>
+                                <div class="hint">12 hours</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="meta">
+                        <div class="titleline">
+                            <div class="skillname">All In</div>
+                            <span class="pill">CD: 12 hours</span>
+                        </div>
+                        <div class="cooldown">A high-risk, high-reward action for the team.</div>
+                        <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="main-game-all-in">
+                            <span>RESET (HOLD)</span>
+                            <span class="reset-timer-ring"></span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-content-custom" class="tab-content">
+            <div class="custom-section-description">Add a custom timer by clicking the '+' button below.</div>
+            <div class="custom-timers-container" id="custom-timers-container">
+                <!-- Custom timers will be dynamically added here -->
+            </div>
+            <div class="stack add-button" style="margin-top: 24px;">
+                <button class="add-skill-button" id="add-custom-timer-button">
+                    +
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- The custom timer modal/pop-up -->
+    <div class="modal-overlay" id="custom-timer-modal">
+        <div class="modal">
+            <h3>Create Custom Timer</h3>
+            <div class="form-group">
+                <label for="timer-name">Timer Name</label>
+                <input type="text" id="timer-name" placeholder="e.g., Team Meeting" />
+            </div>
+            <div class="form-group">
+                <label>Duration</label>
+                <div class="duration-inputs">
+                    <div class="duration-group">
+                        <label for="timer-hours">HOURS</label>
+                        <input type="number" id="timer-hours" min="0" max="24" value="0" />
+                    </div>
+                    <div class="duration-group">
+                        <label for="timer-mins">MINUTES</label>
+                        <input type="number" id="timer-mins" min="0" max="59" value="10" />
+                    </div>
+                    <div class="duration-group">
+                        <label for="timer-secs">SECONDS</label>
+                        <input type="number" id="timer-secs" min="0" max="59" value="0" />
+                    </div>
+                </div>
+            </div>
+            <div class="button-group">
+                <button class="close-button" id="modal-close">Cancel</button>
+                <button class="save-button" id="modal-save">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- The fixed cooldown ready notification bar -->
+    <div id="cooldown-ready-bar">
+        <span>Skills Ready:</span>
+    </div>
+
+<!-- Add Tone.js for sound generation -->
+<script src="https://cdn.jsdelivr.net/npm/tone@14.7.58/build/Tone.min.js"></script>
+<script>
+(function(){
+    // Utility function to format seconds into HH:MM:SS format
+    function fmt(secs){
+        const totalMinutes = Math.floor(secs / 60);
+        const seconds = Math.floor(secs % 60);
+        const hours = Math.floor(totalMinutes / 60);
+        const minutes = totalMinutes % 60;
+        
+        let result = '';
+        if (hours > 0) {
+            result += `${hours.toString().padStart(2, '0')}:`;
+        }
+        result += `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+        return result;
+    }
+    
+    // Function to create a unique ID for custom timers
+    function createCustomId() {
+        return 'custom-' + Date.now();
+    }
+
+    // A map to keep track of ready skills, now storing the skill object including panel info
+    const readySkills = new Map();
+    const cooldownReadyBar = document.getElementById('cooldown-ready-bar');
+    const tabNotifDots = {
+        'tournament': document.querySelector('.tab[data-tab="tournament"] .notif-dot'),
+        'main-game': document.querySelector('.tab[data-tab="main-game"] .notif-dot'),
+        'custom': document.querySelector('.tab[data-tab="custom"] .notif-dot')
+    };
+    
+    // A map to keep track of which panels have ready skills
+    const readySkillsByPanel = {
+        'tournament': new Set(),
+        'main-game': new Set(),
+        'custom': new Set()
+    };
+
+    function updateReadyBar() {
+        cooldownReadyBar.innerHTML = '<span>Skills Ready:</span>';
+        if (readySkills.size === 0) {
+            cooldownReadyBar.classList.remove('active');
+        } else {
+            readySkills.forEach((skill, id) => {
+                const pill = document.createElement('span');
+                pill.classList.add('ready-pill');
+                // Add the correct color class based on the panel
+                if (skill.panelId === 'tournament') pill.classList.add('blue');
+                if (skill.panelId === 'main-game') pill.classList.add('red');
+                if (skill.panelId === 'custom') pill.classList.add('green');
+                
+                pill.textContent = skill.name;
+                pill.setAttribute('data-skill-id', id); // Add the data attribute for easy lookup
+                
+                // Add a click listener to remove the pill and update dots
+                pill.addEventListener('click', () => {
+                    readySkills.delete(id);
+                    readySkillsByPanel[skill.panelId].delete(id); // Remove from the panel-specific set
+                    updateReadyBar();
+                    updateTabNotifications(); // Re-check tab notifications
+                });
+                cooldownReadyBar.appendChild(pill);
+            });
+            cooldownReadyBar.classList.add('active');
+        }
+    }
+
+    function updateTabNotifications() {
+        for (const panel in readySkillsByPanel) {
+            if (readySkillsByPanel[panel].size > 0) {
+                tabNotifDots[panel].classList.add('active');
+            } else {
+                tabNotifDots[panel].classList.remove('active');
+            }
+        }
+    }
+
+    // --- Sound generation setup with Tone.js ---
+    let sounds = {};
+    let soundsEnabled = true;
+
+    function setupSounds() {
+        // Collect sound: a simple, low-pitched chime
+        sounds['tournament-collect'] = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.01,
+                decay: 0.2,
+                sustain: 0.1,
+                release: 0.3
+            }
+        }).toDestination();
+
+        // Tweet sound: a quick, sharp pluck
+        sounds['tournament-tweet'] = new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: {
+                attack: 0.005,
+                decay: 0.1,
+                sustain: 0.05,
+                release: 0.1
+            }
+        }).toDestination();
+
+        // Hype sound: a high-pitched, energetic tone
+        sounds['tournament-hype'] = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: {
+                attack: 0.01,
+                decay: 0.2,
+                sustain: 0.1,
+                release: 0.4
+            }
+        }).toDestination();
+
+        // Bull Run sound: a deep, bassy hum
+        sounds['tournament-bullrun'] = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.5,
+                decay: 0.5,
+                sustain: 0.6,
+                release: 0.8
+            }
+        }).toDestination();
+        
+        // Main game sounds are distinct from tournament ones
+        sounds['main-game-collect'] = new Tone.Synth({
+            oscillator: { type: 'sine' },
+            envelope: {
+                attack: 0.02,
+                decay: 0.2,
+                sustain: 0.1,
+                release: 0.4
+            }
+        }).toDestination();
+
+        sounds['main-game-tweet'] = new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: {
+                attack: 0.008,
+                decay: 0.1,
+                sustain: 0.06,
+                release: 0.12
+            }
+        }).toDestination();
+
+        sounds['main-game-hype'] = new Tone.Synth({
+            oscillator: { type: 'sawtooth' },
+            envelope: {
+                attack: 0.012,
+                decay: 0.25,
+                sustain: 0.15,
+                release: 0.5
+            }
+        }).toDestination();
+
+        sounds['main-game-pump'] = new Tone.Synth({
+            oscillator: { type: 'square' },
+            envelope: {
+                attack: 0.05,
+                decay: 0.4,
+                sustain: 0.3,
+                release: 0.7
+            }
+        }).toDestination();
+        
+        sounds['main-game-all-in'] = new Tone.Synth({
+            oscillator: { type: 'triangle' },
+            envelope: {
+                attack: 0.8,
+                decay: 0.5,
+                sustain: 0.9,
+                release: 1
+            }
+        }).toDestination();
+
+        // Custom timer sound: a simple "ready" tone for all custom skills
+        sounds['custom-ready'] = new Tone.Synth({
+            oscillator: { type: 'fmsine' },
+            envelope: {
+                attack: 0.01,
+                decay: 0.3,
+                sustain: 0.2,
+                release: 0.5
+            }
+        }).toDestination();
+    }
+    
+    // Play a sound based on skill ID
+    function playSound(skillId) {
+        if (!soundsEnabled) {
+            return;
+        }
+
+        console.log(`Attempting to play sound for: ${skillId}`);
+        if (skillId.startsWith('custom-')) {
+            sounds['custom-ready'].triggerAttackRelease('C5', '8n');
+        } else if (sounds[skillId]) {
+            if (skillId.includes('collect')) {
+                sounds[skillId].triggerAttackRelease('C4', '8n');
+            } else if (skillId.includes('tweet')) {
+                sounds[skillId].triggerAttackRelease('E5', '16n');
+            } else if (skillId.includes('hype')) {
+                sounds[skillId].triggerAttackRelease('A5', '8n');
+            } else if (skillId.includes('bullrun')) {
+                sounds[skillId].triggerAttackRelease('G2', '2n');
+            } else if (skillId.includes('pump')) {
+                sounds[skillId].triggerAttackRelease('E4', '4n');
+            } else if (skillId.includes('all-in')) {
+                sounds[skillId].triggerAttackRelease('B3', '1n');
+            }
+        }
+    }
+
+    // --- Main timer logic encapsulated in a single function ---
+    function setupTimer(skillElement) {
+        const skillId = skillElement.getAttribute('data-skill');
+        const skillName = skillElement.getAttribute('data-name');
+        const circle = skillElement.querySelector('.circle');
+        const duration = parseInt(circle.getAttribute('data-duration'), 10);
+        const statusEl = circle.querySelector('[data-role="status"]');
+        const resetButton = skillElement.querySelector('.reset-pill');
+        const deleteButton = skillElement.querySelector('.delete-button'); // Get delete button
+        
+        let ticking = false, remaining = 0, rafId = null, lastTick = null;
+        let holdTimeout = null;
+
+        function getPanelId(id) {
+            if (id.startsWith('tournament')) return 'tournament';
+            if (id.startsWith('main-game')) return 'main-game';
+            if (id.startsWith('custom')) return 'custom';
+            return null;
+        }
+
+        const panelId = getPanelId(skillId);
+
+        function draw(){
+            const ring = circle.querySelector('.ring');
+            const f = remaining / duration;
+            const deg = Math.max(0, Math.min(360, 360*f));
+            ring.style.background = `conic-gradient(from -90deg, var(--accent) ${deg}deg, rgba(255,255,255,0.08) ${deg}deg 360deg)`;
+        }
+
+        function start(){
+            // Check if context is already started, if not, start it
+            if (Tone.context.state !== 'running') {
+                Tone.start();
+            }
+            
+            if(ticking) return;
+            
+            localStorage.setItem(skillId, JSON.stringify({
+                startTime: Date.now(),
+                duration: duration
+            }));
+            
+            ticking = true;
+            circle.classList.add('active');
+            remaining = duration;
+            statusEl.textContent = fmt(Math.ceil(remaining));
+            draw();
+            lastTick = performance.now();
+            
+            // Remove from ready skills and update notifications
+            readySkills.delete(skillId);
+            if (panelId) readySkillsByPanel[panelId].delete(skillId);
+            updateReadyBar();
+            updateTabNotifications();
+
+            const step = (now)=>{
+                const dt = (now - lastTick) / 1000;
+                lastTick = now;
+                remaining = Math.max(0, remaining - dt);
+                statusEl.textContent = fmt(Math.ceil(remaining));
+                draw();
+
+                if(remaining <= 0){
+                    console.log(`Timer ${skillId} reached 0. Stopping.`);
+                    stop(true);
+                    return;
+                }
+                rafId = requestAnimationFrame(step);
+            };
+            rafId = requestAnimationFrame(step);
+        }
+
+        function stop(auto=false){
+            // Guard clause to prevent multiple executions
+            if (!ticking && !auto) {
+                console.log(`Stop for ${skillId} called while not ticking, ignoring.`);
+                return;
+            }
+            console.log(`Stopping timer for ${skillId}. auto=${auto}`);
+            localStorage.removeItem(skillId);
+            
+            ticking = false;
+            if(rafId) cancelAnimationFrame(rafId);
+            circle.classList.remove('active');
+            statusEl.textContent = 'READY';
+            const ring = circle.querySelector('.ring');
+            ring.style.background = `conic-gradient(from -90deg, var(--accent) 360deg, var(--accent) 360deg)`;
+            
+            if(auto){
+                circle.animate(
+                    [{filter:'drop-shadow(0 0 0 rgba(0,255,170,0))'},
+                    {filter:'drop-shadow(0 0 18px rgba(0,255,170,.9))'},
+                    {filter:'drop-shadow(0 0 0 rgba(0,255,170,0))'}],
+                    {duration:650, easing:'ease-out'}
+                );
+                // Play sound and add the skill to the ready list when it completes naturally
+                playSound(skillId);
+                readySkills.set(skillId, { name: skillName, panelId: panelId });
+                if (panelId) readySkillsByPanel[panelId].add(skillId);
+            }
+            updateReadyBar();
+            updateTabNotifications();
+        }
+        
+        function deleteCustomTimer() {
+            const customTimers = JSON.parse(localStorage.getItem('customTimers') || '[]');
+            const updatedTimers = customTimers.filter(timer => timer.id !== skillId);
+            localStorage.setItem('customTimers', JSON.stringify(updatedTimers));
+            readySkills.delete(skillId); // Also remove from the ready list
+            if (panelId) readySkillsByPanel[panelId].delete(skillId);
+            updateReadyBar();
+            updateTabNotifications();
+            skillElement.remove();
+        }
+
+        circle.addEventListener('click', start);
+        
+        if (resetButton) {
+            const startHold = (e) => {
+                if (!ticking) return;
+                e.preventDefault();
+                resetButton.classList.add('holding');
+                holdTimeout = setTimeout(() => {
+                    stop(false);
+                    resetButton.classList.remove('holding');
+                }, 1000);
+            };
+
+            const endHold = () => {
+                clearTimeout(holdTimeout);
+                resetButton.classList.remove('holding');
+            };
+
+            resetButton.addEventListener('mousedown', startHold);
+            resetButton.addEventListener('mouseup', endHold);
+            resetButton.addEventListener('mouseleave', endHold);
+            
+            resetButton.addEventListener('touchstart', startHold);
+            resetButton.addEventListener('touchend', endHold);
+            resetButton.addEventListener('touchcancel', endHold);
+        }
+
+        if (deleteButton) {
+            deleteButton.addEventListener('click', deleteCustomTimer);
+        }
+
+        const savedState = JSON.parse(localStorage.getItem(skillId));
+        if (savedState) {
+            const timeElapsed = (Date.now() - savedState.startTime) / 1000;
+            const timeLeft = savedState.duration - timeElapsed;
+            if (timeLeft > 0) {
+                ticking = true;
+                circle.classList.add('active');
+                remaining = timeLeft;
+                lastTick = performance.now();
+                const step = (now) => {
+                    const dt = (now - lastTick) / 1000;
+                    lastTick = now;
+                    remaining = Math.max(0, remaining - dt);
+                    statusEl.textContent = fmt(Math.ceil(remaining));
+                    draw();
+                    if (remaining <= 0) {
+                        stop(true);
+                        return;
+                    }
+                    rafId = requestAnimationFrame(step);
+                };
+                rafId = requestAnimationFrame(step);
+            } else {
+                localStorage.removeItem(skillId);
+                readySkills.set(skillId, { name: skillName, panelId: panelId }); // Add to ready list if already expired
+                if (panelId) readySkillsByPanel[panelId].add(skillId);
+            }
+        }
+    }
+    
+    function formatDurationHint(durationInSeconds) {
+        const hours = Math.floor(durationInSeconds / 3600);
+        const minutes = Math.floor((durationInSeconds % 3600) / 60);
+        const seconds = durationInSeconds % 60;
+        
+        let parts = [];
+        if (hours > 0) {
+            parts.push(`${hours}h`);
+        }
+        if (minutes > 0) {
+            parts.push(`${minutes}m`);
+        }
+        if (seconds > 0) {
+            parts.push(`${seconds}s`);
+        }
+        return parts.join(' ');
+    }
+
+    function createSkillElement(name, duration, id) {
+        const durationInSeconds = parseInt(duration, 10);
+        const durationHint = formatDurationHint(durationInSeconds);
+        const html = `
+            <div class="skill" data-skill="${id}" data-name="${name}">
+                <button class="delete-button" aria-label="Delete timer">
+                    &times;
+                </button>
+                <div class="circle" data-duration="${durationInSeconds}" aria-label="${name} cooldown">
+                    <div class="ring"></div>
+                    <div class="core">
+                        <div class="label">
+                            <div class="name">🕒 ${name.toUpperCase()}</div>
+                            <div class="status" data-role="status">READY</div>
+                            <div class="hint">${durationHint}</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="meta">
+                    <div class="titleline">
+                        <div class="skillname">${name}</div>
+                        <span class="pill">CD: ${durationHint}</span>
+                    </div>
+                    <div class="cooldown">A custom timer you created.</div>
+                    <span class="pill reset-pill" aria-label="Reset cooldown" data-skill-id="${id}">
+                        <span>RESET (HOLD)</span>
+                        <span class="reset-timer-ring"></span>
+                    </span>
+                </div>
+            </div>
+        `;
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = html.trim();
+        return tempDiv.firstChild;
+    }
+
+    function loadCustomTimers() {
+        const customTimersContainer = document.getElementById('custom-timers-container');
+        customTimersContainer.innerHTML = '';
+        const customTimers = JSON.parse(localStorage.getItem('customTimers') || '[]');
+        customTimers.forEach(timer => {
+            const newSkill = createSkillElement(timer.name, timer.duration, timer.id);
+            customTimersContainer.appendChild(newSkill);
+        });
+    }
+
+    const tabs = document.querySelectorAll('.tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    const addCustomTimerButton = document.getElementById('add-custom-timer-button');
+    const customTimerModal = document.getElementById('custom-timer-modal');
+    const modalCloseButton = document.getElementById('modal-close');
+    const modalSaveButton = document.getElementById('modal-save');
+    const timerNameInput = document.getElementById('timer-name');
+    const timerHoursInput = document.getElementById('timer-hours');
+    const timerMinsInput = document.getElementById('timer-mins');
+    const timerSecsInput = document.getElementById('timer-secs');
+    
+    function showTab(tabId) {
+        tabs.forEach(tab => {
+            if (tab.dataset.tab === tabId) {
+                tab.classList.add('active');
+            } else {
+                tab.classList.remove('active');
+            }
+        });
+        tabContents.forEach(content => {
+            if (content.id === `tab-content-${tabId}`) {
+                content.classList.add('active');
+            } else {
+                content.classList.remove('active');
+            }
+        });
+        document.querySelectorAll('.skill').forEach(setupTimer);
+        updateReadyBar();
+        updateTabNotifications();
+    }
+
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            showTab(tab.dataset.tab);
+        });
+    });
+
+    addCustomTimerButton.addEventListener('click', () => {
+        customTimerModal.classList.add('active');
+        timerNameInput.focus();
+    });
+
+    modalCloseButton.addEventListener('click', () => {
+        customTimerModal.classList.remove('active');
+    });
+
+    modalSaveButton.addEventListener('click', () => {
+        const name = timerNameInput.value.trim();
+        const hours = parseInt(timerHoursInput.value, 10) || 0;
+        const mins = parseInt(timerMinsInput.value, 10) || 0;
+        const secs = parseInt(timerSecsInput.value, 10) || 0;
+        
+        const totalDuration = (hours * 3600) + (mins * 60) + secs;
+        
+        if (!name || totalDuration <= 0) {
+            const modal = document.getElementById('custom-timer-modal');
+            const messageBox = document.createElement('div');
+            messageBox.style.cssText = 'padding:10px; background:var(--active); color:white; border-radius:8px; margin-bottom:10px; text-align:center;';
+            messageBox.textContent = 'Please enter a valid name and a positive duration.';
+            modal.querySelector('.modal').prepend(messageBox);
+            setTimeout(() => messageBox.remove(), 3000);
+            return;
+        }
+
+        const newTimer = {
+            id: createCustomId(),
+            name: name,
+            duration: totalDuration
+        };
+
+        const customTimers = JSON.parse(localStorage.getItem('customTimers') || '[]');
+        customTimers.push(newTimer);
+        localStorage.setItem('customTimers', JSON.stringify(customTimers));
+
+        const newSkill = createSkillElement(newTimer.name, newTimer.duration, newTimer.id);
+        document.getElementById('custom-timers-container').appendChild(newSkill);
+        setupTimer(newSkill);
+
+        timerNameInput.value = '';
+        timerHoursInput.value = '0';
+        timerMinsInput.value = '10';
+        timerSecsInput.value = '0';
+        customTimerModal.classList.remove('active');
+    });
+
+    // Sound toggle button logic
+    const toggleSoundButton = document.getElementById('toggle-sound-button');
+
+    function updateToggleButtonUI() {
+        if (soundsEnabled) {
+            toggleSoundButton.classList.add('active');
+            toggleSoundButton.querySelector('i').className = 'fas fa-volume-up';
+        } else {
+            toggleSoundButton.classList.remove('active');
+            toggleSoundButton.querySelector('i').className = 'fas fa-volume-mute';
+        }
+    }
+
+    toggleSoundButton.addEventListener('click', () => {
+        soundsEnabled = !soundsEnabled;
+        localStorage.setItem('soundsEnabled', soundsEnabled);
+        updateToggleButtonUI();
+    });
+
+    // Initialize all timers for the default tab and load custom timers
+    setupSounds(); // Initialize the sound generators
+    loadCustomTimers(); // Load custom timers first to populate the DOM
+    showTab('tournament'); // Then show the default tab, which sets up the timers
+
+    // Load sound preference from local storage on page load
+    const savedSoundState = localStorage.getItem('soundsEnabled');
+    if (savedSoundState !== null) {
+        soundsEnabled = savedSoundState === 'true';
+    }
+    updateToggleButtonUI();
+})();
+</script>
+</body>
+</html>
